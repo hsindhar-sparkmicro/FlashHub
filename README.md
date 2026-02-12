@@ -11,6 +11,24 @@ FlashHub is a helper GUI tool designed for production environments to flash firm
 
 ![FlashHub Screenshot](images/image.png)
 
+## Why FlashHub?
+
+Working with multiple STM32 devices in production or development can be frustrating. FlashHub was created to solve these common pain points:
+
+### 🔄 Configuration Chaos
+**Problem**: Managing multiple hardware variants with different firmware requires constant switching between binaries and project configurations.  
+**Solution**: FlashHub lets you assign a specific firmware file to each ST-Link probe. No more hunting for the right `*.hex/,*.bin` file or accidentally flashing the wrong firmware.
+
+### ⚡ Manual Reset Fatigue (during development)
+**Problem**: After each flash (when not in debugging mode), you need to manually reset the hardware by power cycling or pressing reset buttons.  
+**Solution**: FlashHub automatically resets the target after programming, eliminating the tedious manual reset step.
+
+### 🎯 Probe Mix-up Confusion
+**Problem**: Constant confusion and mistakes when flashing wrong firmware due to mix-ups between ST-Link probes connected to different hardware.  
+**Solution**: Color-coded visual dashboard with custom alias names (e.g., "Motor Controller", "Display Board") makes it impossible to confuse which probe is which. Each button clearly shows what you're flashing.
+
+**Bottom line**: FlashHub turns hours of tedious, error-prone manual work into a few clicks with confidence.
+
 ## Key Features
 
 - 🔍 **Automatic Probe Detection**: Instantly detects all connected ST-Link probes (V2, V3, etc.)
