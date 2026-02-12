@@ -1,0 +1,25 @@
+{
+    "projects": [
+        {
+            "name": "PDK-New-Addressing-Scheme",
+            "target_device": "stm32g0b1keux",
+            "firmware_path": "/home/hsindhar/git/presence-detection-simran/build/Beaconing-IOT-Anchor-SR11xx/app/example/beaconing/beaconing_anchor.bin",
+            "probes": [],
+            "probes_config": {
+                "002900383133510F37363734": {
+                    "alias": "Gateway",
+                    "firmware": ""
+                },
+                "004400353133510F37363734": {
+                    "alias": "Node 0xB61",
+                    "firmware": ""
+                },
+                "002D001B3431511631343632": {
+                    "alias": "Node 0xBE3",
+                    "firmware": ""
+                }
+            }
+        }
+    ],
+    "current_project_index": 0
+}
