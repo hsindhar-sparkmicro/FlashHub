@@ -66,11 +66,15 @@ class MainWindow(QMainWindow):
         self.project_label = QLabel(f"Project: {self.config.get('name', 'Unknown')}")
         self.project_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         
+        new_project_btn = QPushButton("New Project")
+        new_project_btn.clicked.connect(self.create_new_project)
+        
         manage_btn = QPushButton("Manage Projects")
         manage_btn.clicked.connect(self.open_project_manager)
         
         project_layout.addWidget(self.project_label)
         project_layout.addStretch()
+        project_layout.addWidget(new_project_btn)
         project_layout.addWidget(manage_btn)
         main_layout.addLayout(project_layout)
 
@@ -451,6 +455,23 @@ class MainWindow(QMainWindow):
         self.discovery_worker.probes_found.connect(self.on_probes_found)
         self.discovery_worker.finished.connect(lambda: self.refresh_btn.setEnabled(True))
         self.discovery_worker.start()
+
+    def create_new_project(self):
+        name, ok = QInputDialog.getText(self, "New Project", "Enter project name:")
+        if ok and name:
+            target, ok2 = QInputDialog.getText(
+                self, 
+                "Target Device", 
+                "Enter target device (e.g., stm32g071rb):",
+                text=self.target_input.text()
+            )
+            if ok2:
+                self.config_manager.create_project(name, target or "")
+                self.load_settings()
+                self.log(f"Created and switched to new project: {name}")
+                # Clear probes table for new project
+                self.probes_table.setRowCount(0)
+                self.rebuild_dashboard()
 
     def open_project_manager(self):
         dialog = ProjectManagerDialog(self.config_manager, self)

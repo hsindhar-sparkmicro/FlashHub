@@ -8,18 +8,28 @@
             "probes_config": {
                 "002900383133510F37363734": {
                     "alias": "Gateway",
-                    "firmware": ""
+                    "firmware": "/home/hsindhar/git/presence-detection-simran/build/Beaconing-IOT-Anchor-SR11xx/app/example/beaconing/beaconing_anchor.bin"
                 },
                 "004400353133510F37363734": {
                     "alias": "Node 0xB61",
-                    "firmware": ""
+                    "firmware": "/home/hsindhar/git/presence-detection-simran/build/Beaconing-IOT-Tag-SR11xx/app/example/beaconing/beaconing_tag.elf"
                 },
                 "002D001B3431511631343632": {
                     "alias": "Node 0xBE3",
-                    "firmware": ""
+                    "firmware": "/home/hsindhar/git/presence-detection-simran/build/Beaconing-IOT-Tag-SR11xx/app/example/beaconing/beaconing_tag.bin"
+                }
+            }
+        },
+        {
+            "name": "IDP-Simran",
+            "target_device": "stm32u5a5ajhxq",
+            "probes_config": {
+                "004400353133510F37363734": {
+                    "alias": "Probe Coord",
+                    "firmware": "/home/hsindhar/git/idp-simran/build/sdk-example-sr11xx-quasar/app/example/hello_world/hello_world_coordinator.bin"
                 }
             }
         }
     ],
-    "current_project_index": 0
+    "current_project_index": 1
 }

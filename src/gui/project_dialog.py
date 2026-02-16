@@ -32,6 +32,10 @@ class ProjectManagerDialog(QDialog):
         # Buttons
         btn_layout = QHBoxLayout()
         
+        new_btn = QPushButton("New Project")
+        new_btn.clicked.connect(self.create_new_project)
+        btn_layout.addWidget(new_btn)
+        
         load_btn = QPushButton("Load Project")
         load_btn.clicked.connect(self.load_selected_project)
         btn_layout.addWidget(load_btn)
@@ -67,6 +71,19 @@ class ProjectManagerDialog(QDialog):
         for i in range(count):
             item = self.project_list.item(i)
             item.setHidden(text.lower() not in item.text().lower())
+
+    def create_new_project(self):
+        name, ok = QInputDialog.getText(self, "New Project", "Enter project name:")
+        if ok and name:
+            target, ok2 = QInputDialog.getText(
+                self, 
+                "Target Device", 
+                "Enter target device (e.g., stm32g071rb):"
+            )
+            if ok2:
+                self.config_manager.create_project(name, target or "")
+                self.load_projects()  # Refresh list
+                QMessageBox.information(self, "Success", f"Created new project: {name}")
 
     def load_selected_project(self):
         item = self.project_list.currentItem()
