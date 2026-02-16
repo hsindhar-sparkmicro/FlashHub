@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer
 from src.utils.config_manager import ConfigManager
-from src.gui.workers import FlashWorker, ProbeDiscoveryWorker, TargetDetectionWorker
+from src.gui.workers import FlashWorker, ProbeDiscoveryWorker, TargetDetectionWorker, ResetWorker
 from src.gui.pack_dialog import PackInstallerDialog
 from src.gui.project_dialog import ProjectManagerDialog
 from src.gui.target_selector_dialog import TargetSelectorDialog
@@ -140,12 +140,13 @@ class MainWindow(QMainWindow):
 
         # Probes Table
         self.probes_table = QTableWidget()
-        self.probes_table.setColumnCount(5) # ID, Alias, Firmware, Browse, Status
-        self.probes_table.setHorizontalHeaderLabels(["Probe ID", "Alias Name", "Firmware Path", "Select", "Status"])
+        self.probes_table.setColumnCount(6) # ID, Alias, Firmware, Browse, Reset, Status
+        self.probes_table.setHorizontalHeaderLabels(["Probe ID", "Alias Name", "Firmware Path", "Select", "Reset", "Status"])
         # self.probes_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         self.probes_table.setColumnWidth(0, 150) # ID
         self.probes_table.setColumnWidth(1, 150) # Alias
         self.probes_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch) # Path stretches
+        self.probes_table.setColumnWidth(4, 80) # Reset button
         self.probes_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         main_layout.addWidget(self.probes_table)
 
@@ -227,8 +228,10 @@ class MainWindow(QMainWindow):
             pid_item = self.probes_table.item(row, 0)
             if pid_item:
                 pid = pid_item.text()
-                alias = self.probes_table.cellWidget(row, 1).text()
-                fw = self.probes_table.cellWidget(row, 2).text()
+                alias_widget = self.probes_table.cellWidget(row, 1)
+                fw_widget = self.probes_table.cellWidget(row, 2)
+                alias = alias_widget.text() if alias_widget else ""
+                fw = fw_widget.text() if fw_widget else ""
                 self.config_manager.update_probe_config(pid, alias, fw)
 
         self.config_manager.update_current_project("target_device", self.target_input.text())
@@ -274,7 +277,13 @@ class MainWindow(QMainWindow):
             browse_btn.clicked.connect(lambda checked, r=i: self.browse_firmware_for_row(r))
             self.probes_table.setCellWidget(i, 3, browse_btn)
             
-            # 4: Progress/Status Widget (Container for label + progress bar)
+            # 4: Reset Button
+            reset_btn = QPushButton("Reset")
+            reset_btn.setFixedWidth(70)
+            reset_btn.clicked.connect(lambda checked, p=pid: self.reset_probe(p))
+            self.probes_table.setCellWidget(i, 4, reset_btn)
+            
+            # 5: Progress/Status Widget (Container for label + progress bar)
             container = QWidget()
             layout = QHBoxLayout(container)
             layout.setContentsMargins(5, 0, 5, 0)
@@ -290,7 +299,7 @@ class MainWindow(QMainWindow):
             layout.addWidget(lbl)
             layout.addWidget(pbar)
             
-            self.probes_table.setCellWidget(i, 4, container)
+            self.probes_table.setCellWidget(i, 5, container)
             
         self.rebuild_dashboard()
 
@@ -410,7 +419,7 @@ class MainWindow(QMainWindow):
         for row in range(self.probes_table.rowCount()):
             pid_item = self.probes_table.item(row, 0)
             if pid_item and pid_item.text() == probe_id:
-                container = self.probes_table.cellWidget(row, 4)
+                container = self.probes_table.cellWidget(row, 5)
                 pbar = container.findChild(QProgressBar, f"pbar_{probe_id}")
                 status = container.findChild(QLabel, f"status_{probe_id}")
                 
@@ -438,6 +447,31 @@ class MainWindow(QMainWindow):
         if not hasattr(self, 'active_workers_count') or self.active_workers_count == 0:
             self.flash_all_btn.setEnabled(True)
             self.log("Batch flashing process completed.")
+
+    def reset_probe(self, probe_id):
+        """Reset a single probe without flashing"""
+        target = self.target_input.text()
+        
+        if not target:
+            QMessageBox.warning(self, "Error", "Please specify a target device first.")
+            return
+        
+        # Update status
+        self.update_probe_status(probe_id, "Resetting...", 0, show_bar=False)
+        
+        # Create and start reset worker
+        worker = ResetWorker(probe_id, target)
+        worker.reset_finished.connect(self.on_reset_finished)
+        worker.log_message.connect(self.log)
+        worker.finished.connect(lambda: self.cleanup_worker(f"reset_{probe_id}"))
+        
+        self.workers[f"reset_{probe_id}"] = worker
+        worker.start()
+    
+    def on_reset_finished(self, probe_id, success, message):
+        """Handle reset completion"""
+        status_text = "Reset OK" if success else "Reset Failed"
+        self.update_probe_status(probe_id, status_text, 0, show_bar=False)
 
     def open_target_selector(self):
         dialog = TargetSelectorDialog(self)

@@ -27,6 +27,10 @@
                 "004400353133510F37363734": {
                     "alias": "Probe Coord",
                     "firmware": "/home/hsindhar/git/idp-simran/build/sdk-example-sr11xx-quasar/app/example/hello_world/hello_world_coordinator.bin"
+                },
+                "002D001B3431511631343632": {
+                    "alias": "Probe  Node",
+                    "firmware": "/home/hsindhar/git/idp-simran/build/sdk-example-sr11xx-quasar/app/example/hello_world/hello_world_node.bin"
                 }
             }
         }

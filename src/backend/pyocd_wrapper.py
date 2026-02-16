@@ -210,3 +210,42 @@ class PyOCDWrapper:
         finally:
             if session:
                 session.close()
+
+    @staticmethod
+    def reset_target(probe_id, target_device):
+        """
+        Resets the target MCU without flashing.
+        
+        Args:
+            probe_id (str): Unique ID of the probe.
+            target_device (str): Target MCU type (e.g., 'stm32g071rb').
+        """
+        session = None
+        try:
+            # Connect to the specific probe
+            session = ConnectHelper.session_with_chosen_probe(
+                unique_id=probe_id,
+                target_override=target_device,
+                options={
+                    "connect_mode": "under-reset",
+                    "frequency": 4000000  # 4 MHz default
+                }
+            )
+            
+            with session:
+                # Reset the target
+                session.board.target.reset()
+                logging.info(f"Target reset successful for probe {probe_id}")
+                
+        except DebugError as de:
+            logging.error(f"Debug Error during reset: {de}")
+            msg = str(de)
+            if "Debug power error" in msg:
+                raise Exception("Target power missing (VREF=0V). Check cables/power.") from de
+            raise
+        except Exception as e:
+            logging.error(f"General Error during reset: {e}")
+            raise
+        finally:
+            if session:
+                session.close()

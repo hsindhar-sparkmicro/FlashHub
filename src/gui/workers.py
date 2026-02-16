@@ -85,3 +85,26 @@ class TargetDetectionWorker(QThread):
             self.target_detected.emit(self.probe_id, detected)
         else:
             self.target_detected.emit(self.probe_id, "")
+
+class ResetWorker(QThread):
+    reset_finished = pyqtSignal(str, bool, str)  # probe_id, success, message
+    log_message = pyqtSignal(str)
+
+    def __init__(self, probe_id, target_device):
+        super().__init__()
+        self.probe_id = probe_id
+        self.target_device = target_device
+
+    def run(self):
+        try:
+            self.log_message.emit(f"Resetting target on Probe {self.probe_id}...")
+            
+            PyOCDWrapper.reset_target(self.probe_id, self.target_device)
+            
+            self.reset_finished.emit(self.probe_id, True, "Reset complete.")
+            self.log_message.emit(f"Reset successful for Probe {self.probe_id}")
+            
+        except Exception as e:
+            error_msg = f"Reset error: {str(e)}"
+            self.log_message.emit(error_msg)
+            self.reset_finished.emit(self.probe_id, False, error_msg)
