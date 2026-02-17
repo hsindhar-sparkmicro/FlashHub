@@ -131,6 +131,11 @@ class MainWindow(QMainWindow):
         self.refresh_btn.clicked.connect(self.refresh_probes)
         probes_header.addWidget(self.refresh_btn)
         
+        self.reset_all_btn = QPushButton("Reset All Connected")
+        self.reset_all_btn.setStyleSheet("background-color: #FF9800; color: white;")
+        self.reset_all_btn.clicked.connect(self.reset_all_probes)
+        probes_header.addWidget(self.reset_all_btn)
+        
         self.flash_all_btn = QPushButton("Flash All Connected")
         self.flash_all_btn.setStyleSheet("background-color: #607D8B; color: white;")
         self.flash_all_btn.clicked.connect(self.start_batch_flash)
@@ -472,6 +477,41 @@ class MainWindow(QMainWindow):
         """Handle reset completion"""
         status_text = "Reset OK" if success else "Reset Failed"
         self.update_probe_status(probe_id, status_text, 0, show_bar=False)
+        
+        # Handle batch reset completion
+        if hasattr(self, 'active_reset_count') and self.active_reset_count > 0:
+            self.active_reset_count -= 1
+            if self.active_reset_count == 0:
+                self.reset_all_btn.setEnabled(True)
+                self.log("Batch reset process completed.")
+    
+    def reset_all_probes(self):
+        """Reset all connected probes"""
+        target = self.target_input.text()
+        
+        if not target:
+            QMessageBox.warning(self, "Error", "Please specify a target device first.")
+            return
+        
+        self.reset_all_btn.setEnabled(False)
+        
+        # Get all connected probes
+        probes_to_reset = []
+        for row in range(self.probes_table.rowCount()):
+            pid_item = self.probes_table.item(row, 0)
+            if pid_item:
+                probes_to_reset.append(pid_item.text())
+        
+        if not probes_to_reset:
+            QMessageBox.information(self, "Info", "No probes found.")
+            self.reset_all_btn.setEnabled(True)
+            return
+        
+        self.active_reset_count = len(probes_to_reset)
+        self.log(f"Resetting {len(probes_to_reset)} probes...")
+        
+        for pid in probes_to_reset:
+            self.reset_probe(pid)
 
     def open_target_selector(self):
         dialog = TargetSelectorDialog(self)
