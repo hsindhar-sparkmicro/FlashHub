@@ -76,6 +76,12 @@ class ConfigManager:
             }
             self.save_config()
 
+    def update_current_project_probes_config(self, probes_config):
+        proj = self.get_current_project()
+        if proj is not None:
+            proj["probes_config"] = probes_config or {}
+            self.save_config()
+
     def delete_project(self, index):
         projects = self.config.get("projects", [])
         if 0 <= index < len(projects):
@@ -108,3 +114,20 @@ class ConfigManager:
         if 0 <= idx < len(self.config["projects"]):
             self.config["projects"][idx][key] = value
             self.save_config()
+
+    def update_probe_firmware(self, probe_uid: str, firmware: str, project_name: str | None = None):
+        """Update firmware path for a specific probe UID in the given (or active) project."""
+        if project_name:
+            proj = next((p for p in self.config.get("projects", []) if p["name"].lower() == project_name.lower()), None)
+        else:
+            proj = self.get_current_project()
+        if proj is None:
+            return False
+        probes_config = proj.setdefault("probes_config", {})
+        # Match UID case-insensitively
+        matched_key = next((k for k in probes_config if k.upper() == probe_uid.upper()), None)
+        if matched_key is None:
+            return False
+        probes_config[matched_key]["firmware"] = firmware
+        self.save_config()
+        return True

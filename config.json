@@ -3,26 +3,28 @@
         {
             "name": "PDK-New-Addressing-Scheme",
             "target_device": "stm32g0b1keux",
+            "packs": [
+                "/home/hsindhar/git/presence-detection-simran/.micromamba/packs/Keil.STM32G0xx_DFP.1.5.0.pack"
+            ],
             "firmware_path": "/home/hsindhar/git/presence-detection-simran/build/Beaconing-IOT-Anchor-SR11xx/app/example/beaconing/beaconing_anchor.bin",
             "probes": [],
             "probes_config": {
                 "002900383133510F37363734": {
-                    "alias": "Gateway",
-                    "firmware": "/home/hsindhar/git/presence-detection-simran/build/Beaconing-IOT-Anchor-SR11xx/app/example/beaconing/beaconing_anchor.bin"
+                    "alias": "TAG",
+                    "firmware": "/home/hsindhar/git/presence-detection-simran/build/Beaconing-IOT-Tag-SR11xx/app/example/beaconing/beaconing_tag.bin"
                 },
                 "004400353133510F37363734": {
-                    "alias": "Node 0xB61",
-                    "firmware": "/home/hsindhar/git/presence-detection-simran/build/Beaconing-IOT-Tag-SR11xx/app/example/beaconing/beaconing_tag.elf"
-                },
-                "002D001B3431511631343632": {
-                    "alias": "Node 0xBE3",
-                    "firmware": "/home/hsindhar/git/presence-detection-simran/build/Beaconing-IOT-Tag-SR11xx/app/example/beaconing/beaconing_tag.bin"
+                    "alias": "Anchor",
+                    "firmware": "/home/hsindhar/git/presence-detection-simran/build/Beaconing-IOT-Anchor-SR11xx/app/example/beaconing/beaconing_anchor.bin"
                 }
             }
         },
         {
             "name": "IDP-Simran",
             "target_device": "stm32u5a5ajhxq",
+            "packs": [
+                "/home/hsindhar/git/presence-detection-simran/.micromamba/packs/Keil.STM32U5xx_DFP.2.1.0.pack"
+            ],
             "probes_config": {
                 "004400353133510F37363734": {
                     "alias": "Coord",
@@ -30,10 +32,62 @@
                 },
                 "002D001B3431511631343632": {
                     "alias": "Node",
-                    "firmware": "/home/hsindhar/git/idp-simran/build/sdk-example-sr11xx-quasar/app/example/hello_world/hello_world_node.bin"
+                    "firmware": "/home/hsindhar/git/idp-simran/build/sdk-example-sr11xx-quasar/app/example/memory_leak_reproducer/mem_leak_node.bin"
+                },
+                "002900383133510F37363734": {
+                    "alias": "Coordinator",
+                    "firmware": "/home/hsindhar/git/idp-simran/build/sdk-example-sr11xx-quasar/app/example/memory_leak_reproducer/mem_leak_coordinator.bin"
+                }
+            }
+        },
+        {
+            "name": "Ranging MAMT",
+            "target_device": "stm32g0b1keux",
+            "packs": [
+                "/home/hsindhar/git/presence-detection-simran/.micromamba/packs/Keil.STM32G0xx_DFP.1.5.0.pack"
+            ],
+            "probes_config": {
+                "002900383133510F37363734": {
+                    "alias": "TAG",
+                    "firmware": "/home/hsindhar/presence-detection/build/Ranging-MAMT-IOT-Tag-SR11xx/app/example/ranging_mamt/ranging_mamt_tag_NC16_AC6_ID0xA.bin"
+                },
+                "004400353133510F37363734": {
+                    "alias": "Anchor",
+                    "firmware": "/home/hsindhar/presence-detection/build/Ranging-MAMT-IOT-Anchor-SR11xx/app/example/ranging_mamt/ranging_mamt_anchor_NC16_TC10_ID0xA.bin"
+                }
+            }
+        },
+        {
+            "name": "PDK-Ranging-NewScheme",
+            "target_device": "stm32g0b1keux",
+            "packs": [
+                "/home/hsindhar/git/presence-detection-simran/.micromamba/packs/Keil.STM32G0xx_DFP.1.5.0.pack"
+            ],
+            "probes_config": {
+                "002900383133510F37363734": {
+                    "alias": "Rang-TAG",
+                    "firmware": "/home/hsindhar/git/presence-detection-simran/build/Ranging-MAMT-IOT-Tag-SR11xx/app/example/ranging_mamt/ranging_mamt_tag_NC16_AC6_ID0xA.bin"
+                },
+                "004400353133510F37363734": {
+                    "alias": "Rang-ANCHOR",
+                    "firmware": "/home/hsindhar/git/presence-detection-simran/build/Ranging-MAMT-IOT-Anchor-SR11xx/app/example/ranging_mamt/ranging_mamt_anchor_NC16_TC10_ID0xA.bin"
+                }
+            }
+        },
+        {
+            "name": "Org-Beaconing",
+            "target_device": "stm32g0b1keux",
+            "probes_config": {
+                "002900383133510F37363734": {
+                    "alias": "Probe TAG",
+                    "firmware": "/home/hsindhar/presence-detection/build/Beaconing-IOT-Tag-SR11xx/app/example/beaconing/beaconing_tag.bin"
+                },
+                "004400353133510F37363734": {
+                    "alias": "Probe ANCHOR",
+                    "firmware": "/home/hsindhar/presence-detection/build/Beaconing-IOT-Anchor-SR11xx/app/example/beaconing/beaconing_anchor.bin"
                 }
             }
         }
     ],
-    "current_project_index": 1
+    "current_project_index": 3
 }

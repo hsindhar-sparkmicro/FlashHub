@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FlashHub</title>
+<style>
+  :root {
+    --bg:       #0f1117;
+    --surface:  #1a1d27;
+    --card:     #22263a;
+    --border:   #2e334d;
+    --accent:   #4f8ef7;
+    --accent2:  #6ee7b7;
+    --warn:     #f59e0b;
+    --danger:   #ef4444;
+    --success:  #22c55e;
+    --text:     #e2e8f0;
+    --muted:    #94a3b8;
+    --font:     'Segoe UI', system-ui, sans-serif;
+    --mono:     'Cascadia Code', 'Fira Code', monospace;
+    --radius:   8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+  /* === TOPBAR === */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+  .logo span { color: var(--text); }
+  .spacer { flex: 1; }
+  select {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    outline: none;
+    min-width: 200px;
+  }
+  select:focus { border-color: var(--accent); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; padding: 3px 10px;
+    border-radius: 99px; font-weight: 500;
+  }
+  .badge-conn { background: #14532d44; color: var(--success); border: 1px solid #22c55e44; }
+  .badge-disc  { background: #7f1d1d44; color: var(--danger);  border: 1px solid #ef444444; }
+
+  /* === LAYOUT === */
+  main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 22px; flex-wrap: wrap;
+  }
+  .toolbar h2 { font-size: 16px; font-weight: 600; flex: 1; }
+
+  /* === BUTTONS === */
+  button {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: none; border-radius: var(--radius);
+    padding: 8px 16px; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: opacity .15s, transform .1s;
+    white-space: nowrap;
+  }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .btn-primary   { background: var(--accent);  color: #fff; }
+  .btn-secondary { background: var(--card);    color: var(--text); border: 1px solid var(--border); }
+  .btn-success   { background: #15803d;        color: #fff; }
+  .btn-danger    { background: #b91c1c;        color: #fff; }
+  .btn-warn      { background: #b45309;        color: #fff; }
+  .btn-sm { padding: 5px 11px; font-size: 12px; }
+
+  /* === PROBE CARDS === */
+  .probe-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .probe-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    display: flex; flex-direction: column; gap: 12px;
+    transition: border-color .2s;
+  }
+  .probe-card.flashing { border-color: var(--accent); }
+  .probe-card.done     { border-color: var(--success); }
+  .probe-card.failed   { border-color: var(--danger); }
+
+  .probe-header { display: flex; align-items: center; gap: 10px; }
+  .probe-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .probe-name { font-size: 16px; font-weight: 600; }
+  .probe-uid  { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+  .probe-conn-dot {
+    margin-left: auto; width: 9px; height: 9px; border-radius: 50%;
+  }
+  .dot-green { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .dot-red   { background: var(--danger); }
+
+  .probe-meta { font-size: 12px; color: var(--muted); }
+  .probe-fw {
+    font-family: var(--mono); font-size: 11px;
+    background: var(--surface); padding: 6px 10px;
+    border-radius: 6px; word-break: break-all;
+    border: 1px solid var(--border);
+    color: var(--accent2);
+    flex: 1;
+  }
+  .fw-none { color: var(--danger); font-style: italic; }
+
+  .fw-row {
+    display: flex; align-items: flex-start; gap: 6px;
+  }
+  .btn-edit-fw {
+    background: none; border: 1px solid var(--border);
+    color: var(--muted); border-radius: 6px;
+    padding: 4px 7px; font-size: 12px; cursor: pointer;
+    flex-shrink: 0; margin-top: 0;
+  }
+  .btn-edit-fw:hover { color: var(--accent); border-color: var(--accent); }
+
+  .fw-editor { display: none; flex-direction: column; gap: 6px; }
+  .fw-editor.open { display: flex; }
+  .fw-input {
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--accent); border-radius: 6px;
+    padding: 6px 10px; font-family: var(--mono); font-size: 11px;
+    width: 100%; outline: none;
+  }
+  .fw-input:focus { border-color: var(--accent2); }
+  .fw-editor-btns { display: flex; gap: 6px; }
+
+  /* progress bar */
+  .progress-wrap {
+    height: 6px; background: var(--surface); border-radius: 99px; overflow: hidden;
+    display: none;
+  }
+  .probe-card.flashing .progress-wrap { display: block; }
+  .probe-card.done .progress-wrap     { display: block; }
+  .probe-card.failed .progress-wrap   { display: block; }
+  .progress-bar {
+    height: 100%; border-radius: 99px;
+    background: var(--accent);
+    transition: width .3s ease;
+    width: 0%;
+  }
+  .probe-card.done   .progress-bar { background: var(--success); }
+  .probe-card.failed .progress-bar { background: var(--danger); }
+
+  .probe-status { font-size: 12px; min-height: 16px; }
+  .st-idle     { color: var(--muted); }
+  .st-running  { color: var(--accent); }
+  .st-done     { color: var(--success); }
+  .st-failed   { color: var(--danger); }
+
+  .probe-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+  /* === EMPTY STATE === */
+  .empty {
+    grid-column: 1 / -1;
+    text-align: center; padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty h3 { font-size: 16px; margin-bottom: 6px; color: var(--text); }
+
+  /* === LOG PANEL === */
+  .log-panel {
+    margin-top: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .log-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px; font-weight: 600;
+  }
+  .log-header .spacer { flex: 1; }
+  #log-output {
+    height: 220px; overflow-y: auto;
+    padding: 12px 16px;
+    font-family: var(--mono); font-size: 12px;
+    line-height: 1.7; color: var(--muted);
+  }
+  .log-info    { color: var(--text); }
+  .log-success { color: var(--success); }
+  .log-error   { color: var(--danger); }
+  .log-warn    { color: var(--warn); }
+  .log-ts      { color: var(--border); margin-right: 8px; }
+
+  /* === NOTIFICATION TOAST === */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--card); border: 1px solid var(--border);
+    padding: 12px 18px; border-radius: 10px;
+    font-size: 13px; max-width: 340px;
+    box-shadow: 0 8px 24px #0007;
+    opacity: 0; transform: translateY(10px);
+    transition: all .3s ease; pointer-events: none;
+    z-index: 999;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.toast-ok   { border-color: var(--success); color: var(--success); }
+  #toast.toast-err  { border-color: var(--danger);  color: var(--danger);  }
+
+  /* === SPINNER === */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { display: inline-block; animation: spin .7s linear infinite; }
+
+  /* === UNREGISTERED PROBE === */
+  .probe-card.unregistered { opacity: .6; filter: grayscale(.5); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Flash<span>Hub</span></div>
+  <div style="font-size:13px;color:var(--muted)">Project:</div>
+  <select id="project-select" onchange="onProjectChange(this.value)">
+    <option value="">Loading…</option>
+  </select>
+  <div class="spacer"></div>
+  <span id="conn-badge" class="badge badge-disc">● Connecting…</span>
+</header>
+
+<main>
+  <div class="toolbar">
+    <h2>Connected Probes</h2>
+    <button class="btn-secondary btn-sm" onclick="refreshProbes()">⟳ Refresh</button>
+    <button class="btn-success" id="btn-flash-all" onclick="flashAll()">⚡ Flash All</button>
+    <button class="btn-warn btn-sm" onclick="resetAll()">↺ Reset All</button>
+  </div>
+
+  <div id="probe-grid" class="probe-grid">
+    <div class="empty"><div class="icon">🔍</div><h3>Scanning for probes…</h3></div>
+  </div>
+
+  <div class="log-panel">
+    <div class="log-header">
+      📋 Activity Log
+      <div class="spacer"></div>
+      <button class="btn-secondary btn-sm" onclick="clearLog()">Clear</button>
+    </div>
+    <div id="log-output"></div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// State
+// ============================================================
+let projects = [];
+let activeProject = null;
+let probes = [];
+let probeStates = {};  // alias -> { status, progress, jobId }
+
+// ============================================================
+// Bootstrap
+// ============================================================
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadProjects();
+  await refreshProbes();
+  setInterval(refreshProbes, 10000);
+  setConnected(true);
+});
+
+// ============================================================
+// Projects
+// ============================================================
+async function loadProjects() {
+  try {
+    const data = await api('GET', '/api/projects');
+    projects = data;
+    const sel = document.getElementById('project-select');
+    sel.innerHTML = '';
+    data.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.name;
+      opt.textContent = p.name + (p.active ? '  ✓' : '');
+      if (p.active) { opt.selected = true; activeProject = p; }
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    log('error', 'Failed to load projects: ' + e.message);
+  }
+}
+
+async function onProjectChange(name) {
+  try {
+    await api('POST', '/api/projects/use', { name });
+    toast('Switched to project: ' + name, 'ok');
+    log('info', `Active project → ${name}`);
+    await loadProjects();
+    await refreshProbes();
+    probeStates = {};
+  } catch(e) {
+    toast('Failed: ' + e.message, 'err');
+  }
+}
+
+// ============================================================
+// Probes
+// ============================================================
+async function refreshProbes() {
+  try {
+    probes = await api('GET', '/api/probes');
+    renderProbes();
+    const connBadge = document.getElementById('conn-badge');
+    const connected = probes.filter(p => p.registered).length;
+    connBadge.textContent = `● ${connected} probe${connected !== 1 ? 's' : ''} online`;
+    connBadge.className = 'badge ' + (connected > 0 ? 'badge-conn' : 'badge-disc');
+  } catch(e) {
+    log('error', 'Probe scan failed: ' + e.message);
+    setConnected(false);
+  }
+}
+
+function renderProbes() {
+  const grid = document.getElementById('probe-grid');
+
+  if (!probes.length) {
+    grid.innerHTML = `<div class="empty">
+      <div class="icon">🔌</div>
+      <h3>No probes detected</h3>
+      <p style="font-size:13px;margin-top:6px">Connect a debug probe and click Refresh</p>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = '';
+  probes.forEach(p => {
+    const alias = p.alias || p.uid;
+    const state = probeStates[alias] || { status: 'idle', progress: 0 };
+    const card = document.createElement('div');
+    card.id = 'card-' + alias;
+    card.className = 'probe-card' + (p.registered ? '' : ' unregistered') +
+      (state.status === 'running' ? ' flashing' :
+       state.status === 'done'    ? ' done'     :
+       state.status === 'failed'  ? ' failed'   : '');
+
+    const statusClass  = { idle:'st-idle', running:'st-running', done:'st-done', failed:'st-failed' }[state.status] || 'st-idle';
+    const statusText   = { idle:'Ready', running:`Flashing… ${state.progress}%`, done:'Flash complete ✓', failed:'Failed ✗' }[state.status] || 'Ready';
+    const canFlash = p.registered && !!p.firmware && state.status !== 'running';
+    const canReset = p.registered && state.status !== 'running';
+    const fwText = p.firmware || '';
+    const fwDisplay = p.firmware
+      ? `<div class="probe-fw" id="fw-text-${alias}">${p.firmware}</div>`
+      : `<div class="probe-fw fw-none" id="fw-text-${alias}">No firmware configured</div>`;
+
+    card.innerHTML = `
+      <div class="probe-header">
+        <div class="probe-icon">🔧</div>
+        <div>
+          <div class="probe-name">${alias}</div>
+          <div class="probe-uid">${p.uid}</div>
+        </div>
+        <div class="probe-conn-dot ${p.registered ? 'dot-green' : 'dot-red'}" title="${p.registered ? 'Registered' : 'Not in project config'}"></div>
+      </div>
+      <div class="probe-meta">${p.vendor || ''} ${p.product || ''}</div>
+      <div class="fw-row">
+        ${fwDisplay}
+        <button class="btn-edit-fw" title="Edit firmware path" onclick="openFwEditor('${alias}')">✏️</button>
+      </div>
+      <div class="fw-editor" id="fw-editor-${alias}">
+        <input class="fw-input" id="fw-input-${alias}" value="${fwText.replace(/"/g, '&quot;')}" placeholder="/path/to/firmware.bin"
+               onkeydown="if(event.key==='Enter')saveFirmware('${alias}');else if(event.key==='Escape')closeFwEditor('${alias}');" />
+        <div class="fw-editor-btns">
+          <button class="btn-success btn-sm" onclick="saveFirmware('${alias}')">✓ Save</button>
+          <button class="btn-secondary btn-sm" onclick="closeFwEditor('${alias}')">✗ Cancel</button>
+        </div>
+      </div>
+      <div class="progress-wrap"><div class="progress-bar" id="bar-${alias}" style="width:${state.progress}%"></div></div>
+      <div class="probe-status ${statusClass}" id="status-${alias}">${statusText}</div>
+      <div class="probe-actions">
+        <button class="btn-primary btn-sm" onclick="flashProbe('${alias}')" ${canFlash ? '' : 'disabled'}>⚡ Flash</button>
+        <button class="btn-secondary btn-sm" onclick="resetProbe('${alias}')" ${canReset ? '' : 'disabled'}>↺ Reset</button>
+        <button class="btn-secondary btn-sm" onclick="detectTarget('${alias}')">🔍 Detect</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ============================================================
+// Flash / Reset / Detect
+// ============================================================
+async function flashProbe(alias) {
+  try {
+    const res = await api('POST', '/api/flash', { alias });
+    log('info', `Flash job started for '${alias}' → job ${res.job_id}`);
+    setProbeState(alias, 'running', 0);
+    streamJob(res.job_id, alias);
+  } catch(e) {
+    toast(e.message, 'err');
+    log('error', `Flash error for '${alias}': ${e.message}`);
+  }
+}
+
+async function flashAll() {
+  document.getElementById('btn-flash-all').disabled = true;
+  try {
+    const res = await api('POST', '/api/flash-all', {});
+    if (res.skipped?.length) {
+      log('warn', 'Skipped: ' + res.skipped.join(', '));
+    }
+    res.jobs.forEach(j => {
+      log('info', `Flash job ${j.job_id} started for '${j.alias}'`);
+      setProbeState(j.alias, 'running', 0);
+      streamJob(j.job_id, j.alias);
+    });
+    if (!res.jobs.length) toast('No probes to flash', 'err');
+  } catch(e) {
+    toast(e.message, 'err');
+    log('error', 'Flash-all error: ' + e.message);
+  } finally {
+    document.getElementById('btn-flash-all').disabled = false;
+  }
+}
+
+async function resetProbe(alias) {
+  log('info', `Resetting '${alias}'…`);
+  try {
+    const res = await api('POST', '/api/reset', { alias });
+    toast(res.message, 'ok');
+    log('success', res.message);
+  } catch(e) {
+    toast(e.message, 'err');
+    log('error', `Reset failed for '${alias}': ${e.message}`);
+  }
+}
+
+async function resetAll() {
+  const registered = probes.filter(p => p.registered);
+  for (const p of registered) {
+    await resetProbe(p.alias || p.uid);
+  }
+}
+
+async function detectTarget(alias) {
+  log('info', `Detecting target for '${alias}'…`);
+  try {
+    const res = await api('POST', '/api/detect-target', { alias });
+    toast(`${alias}: ${res.target}`, 'ok');
+    log('success', `Detected target for '${alias}': ${res.target}`);
+  } catch(e) {
+    toast(e.message, 'err');
+    log('error', `Detect failed for '${alias}': ${e.message}`);
+  }
+}
+
+// ============================================================
+// WebSocket job streaming
+// ============================================================
+function streamJob(jobId, alias) {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${proto}://${location.host}/ws/job/${jobId}`);
+
+  ws.onmessage = (ev) => {
+    const evt = JSON.parse(ev.data);
+    if (evt.type === 'progress') {
+      setProbeProgress(alias, evt.progress);
+    } else if (evt.type === 'done') {
+      setProbeState(alias, 'done', 100);
+      toast(`'${alias}' flash complete ✓`, 'ok');
+      log('success', `Flash complete: '${alias}'`);
+      ws.close();
+    } else if (evt.type === 'failed') {
+      setProbeState(alias, 'failed', 0);
+      toast(`'${alias}' failed: ${evt.message}`, 'err');
+      log('error', `Flash failed: '${alias}' — ${evt.message}`);
+      ws.close();
+    }
+  };
+
+  ws.onerror = () => {
+    setProbeState(alias, 'failed', 0);
+    log('error', `WebSocket error for job ${jobId}`);
+  };
+}
+
+// ============================================================
+// Probe state helpers
+// ============================================================
+function setProbeState(alias, status, progress) {
+  probeStates[alias] = { status, progress };
+  const card = document.getElementById('card-' + alias);
+  const bar  = document.getElementById('bar-' + alias);
+  const stat = document.getElementById('status-' + alias);
+  if (!card) return;
+
+  card.className = card.className.replace(/\b(flashing|done|failed)\b/g, '').trim();
+  if (status === 'running') card.classList.add('flashing');
+  else if (status === 'done')   card.classList.add('done');
+  else if (status === 'failed') card.classList.add('failed');
+
+  if (bar) bar.style.width = progress + '%';
+  if (stat) {
+    const labels = { idle:'Ready', running:`Flashing… ${progress}%`, done:'Flash complete ✓', failed:'Failed ✗' };
+    const classes = { idle:'st-idle', running:'st-running', done:'st-done', failed:'st-failed' };
+    stat.textContent = labels[status] || 'Ready';
+    stat.className = 'probe-status ' + (classes[status] || 'st-idle');
+  }
+}
+
+function setProbeProgress(alias, pct) {
+  probeStates[alias] = { ...(probeStates[alias] || {}), progress: pct };
+  const bar  = document.getElementById('bar-' + alias);
+  const stat = document.getElementById('status-' + alias);
+  if (bar)  bar.style.width = pct + '%';
+  if (stat) stat.textContent = `Flashing… ${pct}%`;
+}
+
+// ============================================================
+// Firmware path editing
+// ============================================================
+function openFwEditor(alias) {
+  document.getElementById('fw-editor-' + alias)?.classList.add('open');
+  document.getElementById('fw-input-' + alias)?.focus();
+}
+
+function closeFwEditor(alias) {
+  document.getElementById('fw-editor-' + alias)?.classList.remove('open');
+  // restore input to original value
+  const probe = probes.find(p => (p.alias || p.uid) === alias);
+  if (probe) {
+    const input = document.getElementById('fw-input-' + alias);
+    if (input) input.value = probe.firmware || '';
+  }
+}
+
+async function saveFirmware(alias) {
+  const input = document.getElementById('fw-input-' + alias);
+  if (!input) return;
+  const firmware = input.value.trim();
+  if (!firmware) {
+    toast('Firmware path cannot be empty', 'err');
+    return;
+  }
+  try {
+    await api('PATCH', '/api/probes/firmware', { alias, firmware });
+    // Update local probe cache so Flash button enables immediately
+    const probe = probes.find(p => (p.alias || p.uid) === alias);
+    if (probe) probe.firmware = firmware;
+    // Update displayed text
+    const fwText = document.getElementById('fw-text-' + alias);
+    if (fwText) {
+      fwText.textContent = firmware;
+      fwText.classList.remove('fw-none');
+    }
+    closeFwEditor(alias);
+    // Re-render so Flash button state updates
+    renderProbes();
+    toast(`Firmware updated for '${alias}'`, 'ok');
+    log('success', `Firmware saved for '${alias}': ${firmware}`);
+  } catch(e) {
+    toast('Save failed: ' + e.message, 'err');
+    log('error', `Firmware save failed for '${alias}': ${e.message}`);
+  }
+}
+
+// ============================================================
+// API helper
+// ============================================================
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+  }
+  return res.json();
+}
+
+// ============================================================
+// UI helpers
+// ============================================================
+function setConnected(ok) {
+  const badge = document.getElementById('conn-badge');
+  if (ok) {
+    badge.className = 'badge badge-conn';
+    badge.textContent = '● Server online';
+  } else {
+    badge.className = 'badge badge-disc';
+    badge.textContent = '● Server unreachable';
+  }
+}
+
+let toastTimer;
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show toast-' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 3500);
+}
+
+function log(type, msg) {
+  const out = document.getElementById('log-output');
+  const ts = new Date().toLocaleTimeString();
+  const line = document.createElement('div');
+  line.innerHTML = `<span class="log-ts">${ts}</span><span class="log-${type}">${msg}</span>`;
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('log-output').innerHTML = '';
+}
+</script>
+</body>
+</html>

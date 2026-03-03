@@ -1,4 +1,16 @@
 import sys
+
+# ---------------------------------------------------------------------------
+# CLI fast-path: if --cli is the first argument, hand off immediately without
+# importing Qt at all (no display required).
+# ---------------------------------------------------------------------------
+if len(sys.argv) > 1 and sys.argv[1] == "--cli":
+    # Strip the "--cli" flag so cli.py's own parser sees only its args.
+    sys.argv.pop(1)
+    from cli import main as cli_main
+    cli_main()
+    sys.exit(0)
+
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtNetwork import QLocalSocket, QLocalServer
 from PyQt6.QtCore import QIODevice

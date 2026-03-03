@@ -157,7 +157,7 @@ class PyOCDWrapper:
             return None
 
     @staticmethod
-    def flash_firmware(probe_id, target_device, file_path, progress_callback=None):
+    def flash_firmware(probe_id, target_device, file_path, progress_callback=None, packs=None):
         """
         Flashes firmware to the specified target.
         
@@ -166,18 +166,23 @@ class PyOCDWrapper:
             target_device (str): Target MCU type (e.g., 'stm32g071rb').
             file_path (str): Path to the firmware file (.hex, .bin, .elf).
             progress_callback (callable): Optional callback for progress updates.
+            packs (list[str]): Optional list of local .pack file paths to load.
         """
         session = None
         try:
+            options = {
+                "connect_mode": "under-reset",
+                "frequency": 4000000,
+            }
+            if packs:
+                options["pack"] = packs
+
             # Connect to the specific probe
             # connect_mode='under-reset' helps if target is sleeping or pins reconfigured
             session = ConnectHelper.session_with_chosen_probe(
                 unique_id=probe_id,
                 target_override=target_device,
-                options={
-                    "connect_mode": "under-reset",
-                    "frequency": 4000000  # 4 MHz default
-                }
+                options=options,
             )
             
             with session:
@@ -212,24 +217,29 @@ class PyOCDWrapper:
                 session.close()
 
     @staticmethod
-    def reset_target(probe_id, target_device):
+    def reset_target(probe_id, target_device, packs=None):
         """
         Resets the target MCU without flashing.
         
         Args:
             probe_id (str): Unique ID of the probe.
             target_device (str): Target MCU type (e.g., 'stm32g071rb').
+            packs (list[str]): Optional list of local .pack file paths to load.
         """
         session = None
         try:
+            options = {
+                "connect_mode": "under-reset",
+                "frequency": 4000000,
+            }
+            if packs:
+                options["pack"] = packs
+
             # Connect to the specific probe
             session = ConnectHelper.session_with_chosen_probe(
                 unique_id=probe_id,
                 target_override=target_device,
-                options={
-                    "connect_mode": "under-reset",
-                    "frequency": 4000000  # 4 MHz default
-                }
+                options=options,
             )
             
             with session:

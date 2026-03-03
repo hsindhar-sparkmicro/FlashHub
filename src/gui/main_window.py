@@ -17,7 +17,8 @@ from src.gui.flow_layout import FlowLayout
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("FlashHub - STM32 Firmware Flasher")
+        self.base_window_title = "FlashHub - STM32 Firmware Flasher"
+        self.setWindowTitle(self.base_window_title)
         self.resize(1000, 700)
         
         self.config_manager = ConfigManager()
@@ -25,6 +26,9 @@ class MainWindow(QMainWindow):
         self.workers = {} # Keep track of running threads
         self.discovery_worker = None
         self.detect_worker = None
+        self.save_btn = None
+        self.is_dirty = False
+        self._suspend_dirty_tracking = False
 
         self.init_ui()
         # self.check_openocd() # OpenOCD removed by user request
@@ -85,6 +89,7 @@ class MainWindow(QMainWindow):
         self.target_input = QLineEdit()
         self.target_input.setPlaceholderText("e.g. stm32g071rb")
         self.target_input.setToolTip("Enter the target MCU type (pyOCD target name)")
+        self.target_input.textChanged.connect(self.on_config_changed)
         
         target_layout = QVBoxLayout()
         target_input_layout = QHBoxLayout()
@@ -193,9 +198,33 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.log_area)
 
         # --- Save Config Button ---
-        save_btn = QPushButton("Save Project Configuration")
-        save_btn.clicked.connect(self.save_settings)
-        main_layout.addWidget(save_btn)
+        self.save_btn = QPushButton("Save Project Configuration")
+        self.save_btn.clicked.connect(self.save_settings)
+        main_layout.addWidget(self.save_btn)
+
+    def update_project_visual_state(self):
+        project_name = self.config.get('name', 'Unknown') if self.config else 'Unknown'
+        unsaved_suffix = " *Unsaved" if self.is_dirty else ""
+        self.project_label.setText(f"Project: {project_name}{unsaved_suffix}")
+
+        if self.save_btn:
+            save_text = "Save Project Configuration *" if self.is_dirty else "Save Project Configuration"
+            self.save_btn.setText(save_text)
+            self.save_btn.setStyleSheet("font-weight: bold;" if self.is_dirty else "")
+
+        title_suffix = " *" if self.is_dirty else ""
+        self.setWindowTitle(f"{self.base_window_title}{title_suffix}")
+
+    def set_dirty(self, is_dirty):
+        if self._suspend_dirty_tracking:
+            return
+
+        if self.is_dirty != is_dirty:
+            self.is_dirty = is_dirty
+            self.update_project_visual_state()
+
+    def on_config_changed(self):
+        self.set_dirty(True)
 
     def log(self, message):
         from datetime import datetime
@@ -210,10 +239,59 @@ class MainWindow(QMainWindow):
 
 
     def load_settings(self):
+        self._suspend_dirty_tracking = True
         self.config = self.config_manager.get_current_project() # Refresh config object
-        self.project_label.setText(f"Project: {self.config.get('name', 'Unknown')}")
         self.target_input.setText(self.config.get("target_device", "stm32g071rb"))
         # self.firmware_path_input.setText(self.config.get("firmware_path", "")) # Deprecated
+        self.apply_project_config_to_table()
+        self._suspend_dirty_tracking = False
+        self.is_dirty = False
+        self.update_project_visual_state()
+
+    def collect_probe_table_config(self):
+        probe_config = {}
+        for row in range(self.probes_table.rowCount()):
+            pid_item = self.probes_table.item(row, 0)
+            if not pid_item:
+                continue
+
+            pid = pid_item.text()
+            alias_widget = self.probes_table.cellWidget(row, 1)
+            fw_widget = self.probes_table.cellWidget(row, 2)
+
+            probe_config[pid] = {
+                "alias": alias_widget.text() if alias_widget else "",
+                "firmware": fw_widget.text() if fw_widget else ""
+            }
+
+        return probe_config
+
+    def persist_probe_table_config(self):
+        probe_config = self.collect_probe_table_config()
+        if probe_config:
+            self.config_manager.update_current_project_probes_config(probe_config)
+
+    def apply_project_config_to_table(self):
+        was_suspended = self._suspend_dirty_tracking
+        self._suspend_dirty_tracking = True
+        for row in range(self.probes_table.rowCount()):
+            pid_item = self.probes_table.item(row, 0)
+            if not pid_item:
+                continue
+
+            pid = pid_item.text()
+            p_conf = self.config_manager.get_probe_config(pid)
+
+            alias_widget = self.probes_table.cellWidget(row, 1)
+            fw_widget = self.probes_table.cellWidget(row, 2)
+
+            if alias_widget:
+                alias_widget.setText(p_conf.get("alias", alias_widget.text()))
+            if fw_widget:
+                fw_widget.setText(p_conf.get("firmware", ""))
+
+        self._suspend_dirty_tracking = was_suspended
+        self.rebuild_dashboard()
 
     def save_settings(self):
         # Check if project name is generic default
@@ -228,20 +306,14 @@ class MainWindow(QMainWindow):
                 # User cancelled save/rename
                 return
         
-        # Save table state to config first
-        for row in range(self.probes_table.rowCount()):
-            pid_item = self.probes_table.item(row, 0)
-            if pid_item:
-                pid = pid_item.text()
-                alias_widget = self.probes_table.cellWidget(row, 1)
-                fw_widget = self.probes_table.cellWidget(row, 2)
-                alias = alias_widget.text() if alias_widget else ""
-                fw = fw_widget.text() if fw_widget else ""
-                self.config_manager.update_probe_config(pid, alias, fw)
+        # Save probe table state to current project
+        self.persist_probe_table_config()
 
         self.config_manager.update_current_project("target_device", self.target_input.text())
         # self.config_manager.update_current_project("firmware_path", self.firmware_path_input.text())
         self.log("Settings saved.")
+        self.config = self.config_manager.get_current_project()
+        self.set_dirty(False)
         self.rebuild_dashboard() # Update buttons
 
     def on_probes_found(self, probes):
@@ -269,11 +341,13 @@ class MainWindow(QMainWindow):
             # 1: Alias (Editable QLineEdit)
             alias_edit = QLineEdit(alias_val)
             alias_edit.setPlaceholderText("Alias Name")
+            alias_edit.textChanged.connect(self.on_config_changed)
             self.probes_table.setCellWidget(i, 1, alias_edit)
             
             # 2: Firmware (QLineEdit)
             fw_edit = QLineEdit(fw_val)
             fw_edit.setPlaceholderText("Firmware Path")
+            fw_edit.textChanged.connect(self.on_config_changed)
             self.probes_table.setCellWidget(i, 2, fw_edit)
             
             # 3: Browse Button
@@ -316,7 +390,7 @@ class MainWindow(QMainWindow):
             fw_widget = self.probes_table.cellWidget(row, 2)
             if fw_widget:
                 fw_widget.setText(file_path)
-            self.save_settings()
+                self.on_config_changed()
 
     def rebuild_dashboard(self):
         # Clear existing buttons
@@ -519,7 +593,7 @@ class MainWindow(QMainWindow):
             selected = dialog.selected_target
             if selected:
                 self.target_input.setText(selected)
-                self.save_settings() # Auto save selection
+                self.on_config_changed()
 
     def refresh_probes(self):
         self.refresh_btn.setEnabled(False)
@@ -533,6 +607,8 @@ class MainWindow(QMainWindow):
     def create_new_project(self):
         name, ok = QInputDialog.getText(self, "New Project", "Enter project name:")
         if ok and name:
+            # Persist current project table edits before switching projects
+            self.persist_probe_table_config()
             target, ok2 = QInputDialog.getText(
                 self, 
                 "Target Device", 
@@ -548,6 +624,8 @@ class MainWindow(QMainWindow):
                 self.rebuild_dashboard()
 
     def open_project_manager(self):
+        # Persist current project table edits before project switch
+        self.persist_probe_table_config()
         dialog = ProjectManagerDialog(self.config_manager, self)
         if dialog.exec():
             self.load_settings()
