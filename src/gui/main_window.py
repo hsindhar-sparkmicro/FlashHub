@@ -12,6 +12,7 @@ from src.gui.workers import FlashWorker, ProbeDiscoveryWorker, TargetDetectionWo
 from src.gui.pack_dialog import PackInstallerDialog
 from src.gui.project_dialog import ProjectManagerDialog
 from src.gui.target_selector_dialog import TargetSelectorDialog
+from src.gui.tool_settings_dialog import ToolSettingsDialog
 from src.gui.flow_layout import FlowLayout
 
 class MainWindow(QMainWindow):
@@ -29,6 +30,7 @@ class MainWindow(QMainWindow):
         self.save_btn = None
         self.is_dirty = False
         self._suspend_dirty_tracking = False
+        self.stm32cubeprogrammer_path = ""
 
         self.init_ui()
         # self.check_openocd() # OpenOCD removed by user request
@@ -102,6 +104,23 @@ class MainWindow(QMainWindow):
         
         target_layout.addWidget(QLabel("Target Device:"))
         target_layout.addLayout(target_input_layout)
+
+        tool_layout = QVBoxLayout()
+        tool_input_layout = QHBoxLayout()
+
+        self.flash_tool_combo = QComboBox()
+        self.flash_tool_combo.addItem("pyOCD", "pyocd")
+        self.flash_tool_combo.addItem("STM32CubeProgrammer CLI", "stm32cubeprogrammer")
+        self.flash_tool_combo.currentIndexChanged.connect(self.on_flash_tool_changed)
+        tool_input_layout.addWidget(self.flash_tool_combo)
+
+        self.flash_tool_settings_btn = QPushButton("\u2699")
+        self.flash_tool_settings_btn.setFixedWidth(36)
+        self.flash_tool_settings_btn.clicked.connect(self.open_flash_tool_settings)
+        tool_input_layout.addWidget(self.flash_tool_settings_btn)
+
+        tool_layout.addWidget(QLabel("Flashing Tool:"))
+        tool_layout.addLayout(tool_input_layout)
         
         # Firmware File - Removed global inputs
         # firmware_layout = QVBoxLayout()
@@ -119,6 +138,7 @@ class MainWindow(QMainWindow):
         # firmware_layout.addLayout(firmware_input_layout)
 
         settings_layout.addLayout(target_layout)
+        settings_layout.addLayout(tool_layout)
         # settings_layout.addLayout(firmware_layout) # Global firmware removed
 
         main_layout.addLayout(settings_layout)
@@ -226,6 +246,63 @@ class MainWindow(QMainWindow):
     def on_config_changed(self):
         self.set_dirty(True)
 
+    def get_selected_flash_tool(self):
+        return self.flash_tool_combo.currentData() if self.flash_tool_combo else "pyocd"
+
+    def update_flash_tool_controls(self):
+        selected_tool = self.get_selected_flash_tool()
+        uses_stm32cli = selected_tool == "stm32cubeprogrammer"
+        self.flash_tool_settings_btn.setVisible(uses_stm32cli)
+
+        if uses_stm32cli:
+            if self.stm32cubeprogrammer_path:
+                self.flash_tool_settings_btn.setToolTip(
+                    f"STM32CubeProgrammer CLI path: {self.stm32cubeprogrammer_path}"
+                )
+            else:
+                self.flash_tool_settings_btn.setToolTip(
+                    "Configure STM32CubeProgrammer CLI executable path"
+                )
+
+    def on_flash_tool_changed(self):
+        self.update_flash_tool_controls()
+        self.on_config_changed()
+
+    def open_flash_tool_settings(self):
+        if self.get_selected_flash_tool() != "stm32cubeprogrammer":
+            return
+
+        dialog = ToolSettingsDialog(self.stm32cubeprogrammer_path, self)
+        if dialog.exec():
+            self.stm32cubeprogrammer_path = dialog.get_cli_path()
+            self.config_manager.update_setting("stm32cubeprogrammer_path", self.stm32cubeprogrammer_path)
+            self.update_flash_tool_controls()
+
+    def validate_flash_tool_requirements(self, require_target=True):
+        selected_tool = self.get_selected_flash_tool()
+
+        if selected_tool == "pyocd" and require_target and not self.target_input.text().strip():
+            QMessageBox.warning(self, "Error", "Please specify a target device first.")
+            return False
+
+        if selected_tool == "stm32cubeprogrammer":
+            if not self.stm32cubeprogrammer_path:
+                QMessageBox.warning(
+                    self,
+                    "Error",
+                    "Configure the STM32CubeProgrammer CLI path using the gear button before flashing.",
+                )
+                return False
+
+            if (
+                (os.path.isabs(self.stm32cubeprogrammer_path) or os.path.sep in self.stm32cubeprogrammer_path)
+                and not os.path.isfile(self.stm32cubeprogrammer_path)
+            ):
+                QMessageBox.warning(self, "Error", "Configured STM32CubeProgrammer CLI path is invalid.")
+                return False
+
+        return True
+
     def log(self, message):
         from datetime import datetime
         if getattr(self, 'timestamp_check', None) and self.timestamp_check.isChecked():
@@ -242,6 +319,11 @@ class MainWindow(QMainWindow):
         self._suspend_dirty_tracking = True
         self.config = self.config_manager.get_current_project() # Refresh config object
         self.target_input.setText(self.config.get("target_device", "stm32g071rb"))
+        self.stm32cubeprogrammer_path = self.config_manager.get_setting("stm32cubeprogrammer_path", "")
+        flash_tool = self.config.get("flash_tool", "pyocd")
+        combo_index = self.flash_tool_combo.findData(flash_tool)
+        self.flash_tool_combo.setCurrentIndex(combo_index if combo_index >= 0 else 0)
+        self.update_flash_tool_controls()
         # self.firmware_path_input.setText(self.config.get("firmware_path", "")) # Deprecated
         self.apply_project_config_to_table()
         self._suspend_dirty_tracking = False
@@ -310,6 +392,7 @@ class MainWindow(QMainWindow):
         self.persist_probe_table_config()
 
         self.config_manager.update_current_project("target_device", self.target_input.text())
+        self.config_manager.update_current_project("flash_tool", self.get_selected_flash_tool())
         # self.config_manager.update_current_project("firmware_path", self.firmware_path_input.text())
         self.log("Settings saved.")
         self.config = self.config_manager.get_current_project()
@@ -437,6 +520,9 @@ class MainWindow(QMainWindow):
         target = self.target_input.text()
         fw_path = ""
         alias = ""
+
+        if not self.validate_flash_tool_requirements(require_target=self.get_selected_flash_tool() == "pyocd"):
+            return
         
         for row in range(self.probes_table.rowCount()):
             pid_item = self.probes_table.item(row, 0)
@@ -453,6 +539,10 @@ class MainWindow(QMainWindow):
 
     def start_batch_flash(self):
         target = self.target_input.text()
+
+        if not self.validate_flash_tool_requirements(require_target=self.get_selected_flash_tool() == "pyocd"):
+            return
+
         self.flash_all_btn.setEnabled(False)
         
         probes_to_flash = []
@@ -476,8 +566,18 @@ class MainWindow(QMainWindow):
     def start_flash_worker(self, probe_id, target, firmware):
         # Update UI for specific probe
         self.update_probe_status(probe_id, "Flashing...", 0, show_bar=True)
+
+        selected_tool = self.get_selected_flash_tool()
+        packs = self.config.get("packs") or None
         
-        worker = FlashWorker(probe_id, target, firmware)
+        worker = FlashWorker(
+            probe_id,
+            target,
+            firmware,
+            flash_tool=selected_tool,
+            tool_path=self.stm32cubeprogrammer_path,
+            packs=packs,
+        )
         worker.progress.connect(self.update_flash_progress)
         worker.task_finished.connect(self.on_flash_finished)
         
@@ -531,15 +631,20 @@ class MainWindow(QMainWindow):
         """Reset a single probe without flashing"""
         target = self.target_input.text()
         
-        if not target:
-            QMessageBox.warning(self, "Error", "Please specify a target device first.")
+        if not self.validate_flash_tool_requirements(require_target=self.get_selected_flash_tool() == "pyocd"):
             return
         
         # Update status
         self.update_probe_status(probe_id, "Resetting...", 0, show_bar=False)
         
         # Create and start reset worker
-        worker = ResetWorker(probe_id, target)
+        worker = ResetWorker(
+            probe_id,
+            target,
+            flash_tool=self.get_selected_flash_tool(),
+            tool_path=self.stm32cubeprogrammer_path,
+            packs=self.config.get("packs") or None,
+        )
         worker.reset_finished.connect(self.on_reset_finished)
         worker.log_message.connect(self.log)
         worker.finished.connect(lambda: self.cleanup_worker(f"reset_{probe_id}"))

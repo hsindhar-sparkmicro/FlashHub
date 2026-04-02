@@ -35,6 +35,10 @@ class ProjectManagerDialog(QDialog):
         new_btn = QPushButton("New Project")
         new_btn.clicked.connect(self.create_new_project)
         btn_layout.addWidget(new_btn)
+
+        rename_btn = QPushButton("Rename Project")
+        rename_btn.clicked.connect(self.rename_selected_project)
+        btn_layout.addWidget(rename_btn)
         
         load_btn = QPushButton("Load Project")
         load_btn.clicked.connect(self.load_selected_project)
@@ -94,6 +98,39 @@ class ProjectManagerDialog(QDialog):
         self.config_manager.select_project(index)
         QMessageBox.information(self, "Success", f"Loaded project: {item.text()}")
         self.accept() # Close dialog and return accepted
+
+    def rename_selected_project(self):
+        item = self.project_list.currentItem()
+        if not item:
+            QMessageBox.information(self, "Rename Project", "Please select a project to rename.")
+            return
+
+        index = item.data(100)
+        current_project = self.config_manager.get_projects()[index]
+        current_name = current_project.get("name", "")
+
+        new_name, ok = QInputDialog.getText(
+            self,
+            "Rename Project",
+            "Enter new project name:",
+            text=current_name,
+        )
+        if not ok:
+            return
+
+        cleaned_name = new_name.strip()
+        if not cleaned_name:
+            QMessageBox.warning(self, "Rename Project", "Project name cannot be empty.")
+            return
+
+        if cleaned_name == current_name:
+            return
+
+        if self.config_manager.rename_project(index, cleaned_name):
+            self.load_projects()
+            QMessageBox.information(self, "Success", f"Renamed project to: {cleaned_name}")
+        else:
+            QMessageBox.warning(self, "Rename Project", "Failed to rename project.")
 
     def delete_selected_project(self):
         item = self.project_list.currentItem()

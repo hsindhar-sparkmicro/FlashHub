@@ -1,14 +1,20 @@
+import copy
 import json
 import os
 
 class ConfigManager:
     DEFAULT_CONFIG = {
+        "settings": {
+            "stm32cubeprogrammer_path": ""
+        },
         "projects": [
             {
                 "name": "Default Project",
                 "target_device": "stm32g0b0",
                 "firmware_path": "",
-                "probes": []
+                "probes": [],
+                "probes_config": {},
+                "flash_tool": "pyocd"
             }
         ],
         "current_project_index": 0
@@ -20,14 +26,39 @@ class ConfigManager:
 
     def load_config(self):
         if not os.path.exists(self.config_path):
-            self.save_config(self.DEFAULT_CONFIG)
-            return self.DEFAULT_CONFIG
+            default_config = copy.deepcopy(self.DEFAULT_CONFIG)
+            self.save_config(default_config)
+            return default_config
         
         try:
             with open(self.config_path, 'r') as f:
-                return json.load(f)
+                return self.normalize_config(json.load(f))
         except (json.JSONDecodeError, IOError):
-            return self.DEFAULT_CONFIG
+            return copy.deepcopy(self.DEFAULT_CONFIG)
+
+    def normalize_config(self, config):
+        normalized = copy.deepcopy(config)
+        settings = normalized.setdefault("settings", {})
+        projects = normalized.get("projects", [])
+
+        if not projects:
+            normalized = copy.deepcopy(self.DEFAULT_CONFIG)
+            settings = normalized["settings"]
+            projects = normalized["projects"]
+
+        migrated_cli_path = settings.get("stm32cubeprogrammer_path", "")
+
+        for project in projects:
+            project.setdefault("probes_config", {})
+            project.setdefault("flash_tool", "pyocd")
+            project_cli_path = project.pop("stm32cubeprogrammer_path", "")
+            if not migrated_cli_path and project_cli_path:
+                migrated_cli_path = project_cli_path
+
+        settings.setdefault("stm32cubeprogrammer_path", migrated_cli_path)
+
+        normalized.setdefault("current_project_index", 0)
+        return normalized
 
     def save_config(self, config=None):
         if config is not None:
@@ -51,12 +82,21 @@ class ConfigManager:
             "name": name,
             "target_device": target,
             # "firmware_path": firmware, # Deprecated global firmware
-            "probes_config": {} # Map unique_id -> {alias: "", firmware: ""}
+            "probes_config": {}, # Map unique_id -> {alias: "", firmware: ""}
+            "flash_tool": "pyocd"
         }
         self.config["projects"].append(new_project)
         self.config["current_project_index"] = len(self.config["projects"]) - 1
         self.save_config()
         return new_project
+
+    def get_setting(self, key, default=None):
+        return self.config.get("settings", {}).get(key, default)
+
+    def update_setting(self, key, value):
+        settings = self.config.setdefault("settings", {})
+        settings[key] = value
+        self.save_config()
 
     def get_probe_config(self, probe_id):
         proj = self.get_current_project()
@@ -108,6 +148,20 @@ class ConfigManager:
             self.save_config()
             return self.get_current_project()
         return None
+
+    def rename_project(self, index, new_name):
+        projects = self.config.get("projects", [])
+        cleaned_name = (new_name or "").strip()
+
+        if not cleaned_name:
+            return False
+
+        if 0 <= index < len(projects):
+            projects[index]["name"] = cleaned_name
+            self.save_config()
+            return True
+
+        return False
 
     def update_current_project(self, key, value):
         idx = self.config.get("current_project_index", 0)

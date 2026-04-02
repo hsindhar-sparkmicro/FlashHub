@@ -1,5 +1,6 @@
 from PyQt6.QtCore import QThread, pyqtSignal
 from src.backend.pyocd_wrapper import PyOCDWrapper
+from src.backend.stm32cubeprogrammer_wrapper import STM32CubeProgrammerWrapper
 # from src.backend.openocd_wrapper import OpenOCDWrapper # Removed
 import traceback
 
@@ -8,11 +9,14 @@ class FlashWorker(QThread):
     task_finished = pyqtSignal(str, bool, str)  # probe_id, success, message
     log_message = pyqtSignal(str) # General log messages
 
-    def __init__(self, probe_id, target_device, firmware_path):
+    def __init__(self, probe_id, target_device, firmware_path, flash_tool="pyocd", tool_path="", packs=None):
         super().__init__()
         self.probe_id = probe_id
         self.target_device = target_device
         self.firmware_path = firmware_path
+        self.flash_tool = flash_tool
+        self.tool_path = tool_path
+        self.packs = packs
 
     def run(self):
         try:
@@ -21,12 +25,22 @@ class FlashWorker(QThread):
             def update_progress(percent):
                 self.progress.emit(self.probe_id, percent)
 
-            PyOCDWrapper.flash_firmware(
-                self.probe_id, 
-                self.target_device, 
-                self.firmware_path, 
-                progress_callback=update_progress
-            )
+            if self.flash_tool == "stm32cubeprogrammer":
+                STM32CubeProgrammerWrapper.flash_firmware(
+                    self.probe_id,
+                    self.target_device,
+                    self.firmware_path,
+                    cli_path=self.tool_path,
+                    progress_callback=update_progress,
+                )
+            else:
+                PyOCDWrapper.flash_firmware(
+                    self.probe_id,
+                    self.target_device,
+                    self.firmware_path,
+                    progress_callback=update_progress,
+                    packs=self.packs,
+                )
             
             self.task_finished.emit(self.probe_id, True, "Flashing complete.")
             self.log_message.emit(f"Flash successful for Probe {self.probe_id}")
@@ -90,16 +104,26 @@ class ResetWorker(QThread):
     reset_finished = pyqtSignal(str, bool, str)  # probe_id, success, message
     log_message = pyqtSignal(str)
 
-    def __init__(self, probe_id, target_device):
+    def __init__(self, probe_id, target_device, flash_tool="pyocd", tool_path="", packs=None):
         super().__init__()
         self.probe_id = probe_id
         self.target_device = target_device
+        self.flash_tool = flash_tool
+        self.tool_path = tool_path
+        self.packs = packs
 
     def run(self):
         try:
             self.log_message.emit(f"Resetting target on Probe {self.probe_id}...")
             
-            PyOCDWrapper.reset_target(self.probe_id, self.target_device)
+            if self.flash_tool == "stm32cubeprogrammer":
+                STM32CubeProgrammerWrapper.reset_target(
+                    self.probe_id,
+                    self.target_device,
+                    cli_path=self.tool_path,
+                )
+            else:
+                PyOCDWrapper.reset_target(self.probe_id, self.target_device, packs=self.packs)
             
             self.reset_finished.emit(self.probe_id, True, "Reset complete.")
             self.log_message.emit(f"Reset successful for Probe {self.probe_id}")
