@@ -12,6 +12,7 @@
 ```bash
 chmod +x build.sh
 ./build.sh
+./install_launcher.sh
 ```
 
 ### Windows
@@ -29,6 +30,8 @@ pyinstaller FlashHub.spec
 - Executable will be in `dist/` folder
 - Linux: `dist/FlashHub`
 - Windows: `dist\FlashHub.exe`
+- Linux launcher: `~/.local/share/applications/FlashHub.desktop` after running `./install_launcher.sh`
+- Terminal launcher from repo: `./FlashHub`
 
 ## Distribution
 
@@ -41,6 +44,11 @@ The executable is standalone and includes:
 Users don't need Python installed to run it.
 
 ## Troubleshooting
+
+### Running on Ubuntu
+- Do not run a `.desktop` file in a shell. A desktop entry is a launcher descriptor, not a bash script.
+- To start from the terminal in the repo, use `./FlashHub`.
+- To start from the desktop, use the installed launcher in the app menu or double-click the generated `~/Desktop/FlashHub.desktop` created by `./install_launcher.sh`.
 
 ### Missing modules
 Add to `hiddenimports` in FlashHub.spec

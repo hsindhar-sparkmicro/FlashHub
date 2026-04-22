@@ -1,6 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from PyInstaller.utils.hooks import collect_data_files
+
 block_cipher = None
+
+pyocd_datas = collect_data_files('pyocd')
 
 a = Analysis(
     ['main.py'],
@@ -9,7 +13,7 @@ a = Analysis(
     datas=[
         ('config.json', '.'),
         ('images', 'images'),
-    ],
+    ] + pyocd_datas,
     hiddenimports=[
         'PyQt6.QtCore',
         'PyQt6.QtGui',

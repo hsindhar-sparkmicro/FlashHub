@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # CLI fast-path: if --cli is the first argument, hand off immediately without
@@ -14,12 +15,31 @@ if len(sys.argv) > 1 and sys.argv[1] == "--cli":
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtNetwork import QLocalSocket, QLocalServer
 from PyQt6.QtCore import QIODevice
+from PyQt6.QtGui import QIcon
 from src.gui.main_window import MainWindow
 
 INSTANCE_ID = "FlashHubSingleInstanceIdentifier"
 
-def main():
+def resource_path(*parts: str) -> Path:
+    base_path = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    return base_path.joinpath(*parts)
+
+
+def create_app_icon() -> QIcon:
+    icon_path = resource_path("images", "flashhub_icon.svg")
+    if icon_path.exists():
+        icon = QIcon(str(icon_path))
+        if not icon.isNull():
+            return icon
+    return QIcon()
+
+
+def main() -> None:
     app = QApplication(sys.argv)
+    app.setDesktopFileName("FlashHub")
+    icon = create_app_icon()
+    if not icon.isNull():
+        app.setWindowIcon(icon)
     
     # Check for existing instance
     socket = QLocalSocket()
@@ -41,8 +61,10 @@ def main():
     app.setStyle("Fusion")
     
     window = MainWindow()
+    if not icon.isNull():
+        window.setWindowIcon(icon)
     
-    def handle_new_connection():
+    def handle_new_connection() -> None:
         # Someone tried to run a second instance
         new_socket = server.nextPendingConnection()
         new_socket.close()

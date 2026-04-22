@@ -22,5 +22,6 @@ pyinstaller FlashHub.spec
 echo ""
 echo "=== Build Complete ==="
 echo "Executable created: dist/FlashHub"
+echo "Install launcher with: ./install_launcher.sh"
 echo ""
 echo "To test: ./dist/FlashHub"

@@ -40,6 +40,8 @@ Working with multiple STM32 devices in production or development can be frustrat
 - 📊 **Real-Time Progress**: Individual progress bars and status for each probe
 - 🕐 **Timestamped Logs**: Optional timestamps with clear button for log management
 - 🔒 **Single Instance**: Prevents multiple app instances to avoid conflicts
+- 🛠️ **Multiple Flashing Tools**: Support for pyOCD, STM32CubeProgrammer, and OpenOCD
+- ⌨️ **CLI Mode**: Full command-line interface for automation and scripting
 
 ## Installation
 
@@ -174,6 +176,15 @@ FlashHub supports multiple projects for different production lines:
 
 ## Advanced Features
 
+### Flashing Tools
+
+FlashHub supports multiple flashing backends:
+- **pyOCD** (default): Uses pyOCD for flashing via ST-Link
+- **STM32CubeProgrammer**: Uses ST's official CLI tool
+- **OpenOCD**: Uses OpenOCD for advanced debugging scenarios
+
+Configure the flashing tool via **Settings → Tool Settings** in the GUI, or via CLI path configuration.
+
 ### Under-Reset Connection Mode
 
 FlashHub uses `connect_mode="under-reset"` for robust connections. This helps when:
@@ -264,6 +275,8 @@ If `source venv/bin/activate` doesn't work:
 
 - **PyQt6**: Modern Qt6 bindings for Python GUI
 - **pyOCD**: Open-source ARM Cortex-M debugger and programmer
+- **STM32CubeProgrammer** (optional): ST's official CLI tool for flashing
+- **OpenOCD** (optional): Open On-Chip Debugger for advanced debugging
 
 ## License
 
@@ -272,6 +285,39 @@ If `source venv/bin/activate` doesn't work:
 ## Contributing
 
 [Add contribution guidelines here]
+
+## CLI Mode
+
+FlashHub includes a full command-line interface for automation and scripting. Run with `--cli` flag:
+
+```bash
+# Show all available commands
+python3 main.py --cli --help
+
+# List all projects
+python3 main.py --cli projects list
+
+# List connected probes
+python3 main.py --cli probes list
+
+# Flash a specific probe by alias
+python3 main.py --cli flash "Motor Controller"
+
+# Flash all configured probes
+python3 main.py --cli flash-all
+
+# Reset a probe
+python3 main.py --cli reset "Display Board"
+
+# Detect target MCU
+python3 main.py --cli detect "Motor Controller"
+
+# List supported targets
+python3 main.py --cli targets
+
+# Switch active project
+python3 main.py --cli project use "Production Line A"
+```
 
 ## Support
 
