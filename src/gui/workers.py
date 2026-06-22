@@ -80,8 +80,11 @@ class PackInstallWorker(QThread):
         self.family_name = family_name
 
     def run(self):
-        success = PyOCDWrapper.install_pack(self.family_name)
-        msg = f"Pack installation for '{self.family_name}' {'succeeded' if success else 'failed'}."
+        success, details = PyOCDWrapper.install_pack(self.family_name)
+        if success:
+            msg = f"Pack installation for '{self.family_name}' succeeded."
+        else:
+            msg = f"Pack installation for '{self.family_name}' failed: {details}"
         self.finished.emit(success, msg)
 
 class TargetDetectionWorker(QThread):

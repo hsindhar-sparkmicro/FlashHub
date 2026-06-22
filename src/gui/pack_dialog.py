@@ -24,8 +24,8 @@ class PackInstallWorker(QThread):
         self.target = target
 
     def run(self):
-        success = PyOCDWrapper.install_pack(self.target)
-        self.finished.emit(success, f"Install {'succeeded' if success else 'failed'} for {self.target}")
+        success, message = PyOCDWrapper.install_pack(self.target)
+        self.finished.emit(success, message)
 
 class PackInstallerDialog(QDialog):
     def __init__(self, parent=None):

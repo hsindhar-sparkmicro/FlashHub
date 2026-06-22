@@ -13,10 +13,6 @@
                     "alias": "Probe Tag",
                     "firmware": "/home/hsindhar/presence-detection/build/Beaconing-IOT-Tag-SR11xx/app/example/beaconing/beaconing_tag.bin"
                 },
-                "002D001B3431511631343632": {
-                    "alias": "Probe Anchor",
-                    "firmware": "/home/hsindhar/presence-detection/build/Beaconing-IOT-Anchor-SR11xx/app/example/beaconing/beaconing_anchor.bin"
-                },
                 "004400353133510F37363734": {
                     "alias": "Probe Tag 2",
                     "firmware": "/home/hsindhar/presence-detection/build/Beaconing-IOT-Tag-SR11xx/app/example/beaconing/beaconing_tag.bin"
@@ -31,20 +27,16 @@
                 "/home/hsindhar/git/presence-detection-simran/.micromamba/packs/Keil.STM32G0xx_DFP.1.5.0.pack"
             ],
             "probes_config": {
-                "002900383133510F37363734": {
-                    "alias": "Probe Tag",
-                    "firmware": "/home/hsindhar/presence-detection/build/Ranging-MAMT-IOT-Tag-SR11xx/app/example/ranging_mamt/ranging_mamt_tag_NC16_AC6.bin"
-                },
                 "002D001B3431511631343632": {
-                    "alias": "Probe Anchor",
-                    "firmware": "/home/hsindhar/presence-detection/build/Ranging-MAMT-IOT-Anchor-SR11xx/app/example/ranging_mamt/ranging_mamt_anchor_NC16_TC10_PAN0xF0B.bin"
+                    "alias": "Probe 1",
+                    "firmware": "/home/hsindhar/presence-detection/build/Ranging-MAMT-IOT-Anchor-SR11xx/app/example/ranging_mamt/ranging_mamt_anchor_ADDR1_NC16_TC10_PAN0xF1B.bin"
                 },
                 "004400353133510F37363734": {
                     "alias": "Probe Tag 2",
                     "firmware": "/home/hsindhar/presence-detection/build/Ranging-MAMT-IOT-Tag-SR11xx/app/example/ranging_mamt/ranging_mamt_tag_NC16_AC6.bin"
                 }
             },
-            "flash_tool": "stm32cubeprogrammer"
+            "flash_tool": "pyocd"
         },
         {
             "name": "Ranging_OTA-New-Scheme",
@@ -98,9 +90,102 @@
                 }
             },
             "flash_tool": "pyocd"
+        },
+        {
+            "name": "Amazon-Comet",
+            "target_device": "stm32u5a5ajhxq",
+            "probes_config": {
+                "002900383133510F37363734": {
+                    "alias": "Probe 1",
+                    "firmware": "/home/hsindhar/git/Amazon/comet/build/SPARK-NCP/app/example/spark_ncp/spark_ncp_server.bin"
+                },
+                "004400353133510F37363734": {
+                    "alias": "Probe 1",
+                    "firmware": "/home/hsindhar/git/Amazon/comet/build/SPARK-NCP/app/example/spark_ncp/spark_ncp_server.bin"
+                }
+            },
+            "flash_tool": "pyocd"
+        },
+        {
+            "name": "Commet-validator",
+            "target_device": "stm32u5a5ajhxq",
+            "probes_config": {
+                "002D001B3431511631343632": {
+                    "alias": "Probe 1",
+                    "firmware": "/home/hsindhar/git/Notes/Amazon/bk-comet/comet/build/bsp-validator-tool-quasar/app/tool/bsp_validator/validator.bin"
+                }
+            },
+            "flash_tool": "pyocd"
+        },
+        {
+            "name": "Comet-flow-ctrl",
+            "target_device": "stm32u5a5ajhxq",
+            "probes_config": {
+                "002D001B3431511631343632": {
+                    "alias": "Probe 1",
+                    "firmware": "/home/hsindhar/git/Amazon/comet/build/UART-Flow-Ctrl/app/example/uart_flow_ctrl/uart_flow_ctrl.bin"
+                },
+                "004400353133510F37363734": {
+                    "alias": "Probe 2",
+                    "firmware": "/home/hsindhar/git/Amazon/comet/build/UART-Flow-Ctrl/app/example/uart_flow_ctrl/uart_flow_ctrl.bin"
+                }
+            },
+            "flash_tool": "pyocd"
+        },
+        {
+            "name": "Uart-DMA",
+            "target_device": "stm32u5a5ajhxq",
+            "probes_config": {
+                "002D001B3431511631343632": {
+                    "alias": "Probe 1",
+                    "firmware": "/home/hsindhar/git/Amazon/comet/build/UART-DMA/app/example/uart_double_buffered_dma/uart_double_buffered_dma.bin"
+                },
+                "004400353133510F37363734": {
+                    "alias": "Probe 2",
+                    "firmware": "/home/hsindhar/git/Amazon/comet/build/UART-DMA/app/example/uart_double_buffered_dma/uart_double_buffered_dma.bin"
+                }
+            },
+            "flash_tool": "pyocd"
+        },
+        {
+            "name": "Fallback-power-test",
+            "target_device": "stm32u5a5ajhxq",
+            "probes_config": {
+                "002D001B3431511631343632": {
+                    "alias": "Probe Coord",
+                    "firmware": "/home/hsindhar/git/idp-simran/build/sdk-example-sr11xx-quasar/app/qa/explicit_fallback_test/explicit_fallback_test_coordinator.bin"
+                },
+                "004400353133510F37363734": {
+                    "alias": "Probe Node",
+                    "firmware": "/home/hsindhar/git/idp-simran/build/sdk-example-sr11xx-quasar/app/qa/explicit_fallback_test/explicit_fallback_test_node.bin"
+                }
+            },
+            "flash_tool": "pyocd"
+        },
+        {
+            "name": "Comet-org",
+            "target_device": "stm32u5a5ajhxq",
+            "probes_config": {
+                "004400353133510F37363734": {
+                    "alias": "Probe 1",
+                    "firmware": "/home/hsindhar/git/Amazon-org/comet/build/SPARK-NCP/app/example/spark_ncp/spark_ncp_server.bin"
+                }
+            },
+            "flash_tool": "pyocd"
+        },
+        {
+            "name": "Radio-Comet-Modem",
+            "target_device": "stm32u5a5ajhxq",
+            "probes_config": {
+                "004400353133510F37363734": {
+                    "alias": "Probe 1",
+                    "firmware": "/home/hsindhar/git/Amazon/comet/build/Radio-SPI-Test-comet_modem/app/example/radio_spi_test/radio_spi_test.bin"
+                }
+            },
+            "flash_tool": "pyocd"
         }
     ],
-    "current_project_index": 0,
+    "current_project_index": 5,
     "settings": {
         "stm32cubeprogrammer_path": "/home/hsindhar/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin/STM32_Programmer_CLI"
     }

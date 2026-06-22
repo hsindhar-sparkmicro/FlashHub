@@ -1,10 +1,65 @@
-import subprocess
+import io
 import logging
+from contextlib import redirect_stderr, redirect_stdout
+from pyocd.probe.aggregator import PROBE_CLASSES
 from pyocd.core.helpers import ConnectHelper
 from pyocd.flash.file_programmer import FileProgrammer
 from pyocd.core.exceptions import DebugError
+from pyocd.__main__ import PyOCDTool
+
+
+def _ensure_builtin_probe_plugins_loaded():
+    if PROBE_CLASSES:
+        return
+
+    plugin_factories = []
+
+    try:
+        from pyocd.probe.cmsis_dap_probe import CMSISDAPProbePlugin
+        plugin_factories.append(CMSISDAPProbePlugin)
+    except ImportError:
+        pass
+
+    try:
+        from pyocd.probe.jlink_probe import JLinkProbePlugin
+        plugin_factories.append(JLinkProbePlugin)
+    except ImportError:
+        pass
+
+    try:
+        from pyocd.probe.picoprobe import PicoprobePlugin
+        plugin_factories.append(PicoprobePlugin)
+    except ImportError:
+        pass
+
+    try:
+        from pyocd.probe.stlink_probe import StlinkProbePlugin
+        plugin_factories.append(StlinkProbePlugin)
+    except ImportError:
+        pass
+
+    try:
+        from pyocd.probe.tcp_client_probe import TCPClientProbePlugin
+        plugin_factories.append(TCPClientProbePlugin)
+    except ImportError:
+        pass
+
+    for plugin_factory in plugin_factories:
+        try:
+            plugin = plugin_factory()
+            if plugin.should_load():
+                PROBE_CLASSES.setdefault(plugin.name, plugin.load())
+        except Exception as error:
+            logging.debug("Skipping pyOCD probe plugin %s: %s", plugin_factory.__name__, error)
 
 class PyOCDWrapper:
+    @staticmethod
+    def _run_pyocd_command(args):
+        output_buffer = io.StringIO()
+        with redirect_stdout(output_buffer), redirect_stderr(output_buffer):
+            exit_code = PyOCDTool().run(args)
+        return exit_code, output_buffer.getvalue().strip()
+
     @staticmethod
     def list_probes():
         """
@@ -12,6 +67,7 @@ class PyOCDWrapper:
         Returns a list of dictionaries with probe details.
         """
         try:
+            _ensure_builtin_probe_plugins_loaded()
             probes = ConnectHelper.get_all_connected_probes(blocking=False)
             probe_list = []
             for probe in probes:
@@ -31,31 +87,22 @@ class PyOCDWrapper:
         Returns a list of supported targets by running 'pyocd list --targets'.
         """
         try:
-            # Run pyocd list --targets
-            result = subprocess.run(
-                ["pyocd", "list", "--targets"], 
-                capture_output=True, 
-                text=True, 
-                check=True
-            )
-            lines = result.stdout.split('\n')
+            exit_code, output = PyOCDWrapper._run_pyocd_command(["list", "--targets"])
+            if exit_code != 0:
+                logging.error("Error listing targets: %s", output)
+                return []
+
+            lines = output.split('\n')
             targets = []
-            # Parse output, usually format: "  stm32g071rb        ST..."
-            # Skip header if any, usually valid targets are indented or first word
             for line in lines:
                 parts = line.strip().split()
                 if parts:
-                    # heuristic: first column is target name if it doesn't look like a header
                     target = parts[0]
                     if target.lower() not in ["matches", "name", "vendor", "part", "family", "source"]:
                         targets.append(target)
             return sorted(list(set(targets)))
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Error listing targets: {e}")
-            return []
-        except FileNotFoundError:
-             # Fallback if pyocd not in path
-            logging.error("pyocd executable not found.")
+        except Exception as error:
+            logging.error("Error listing targets: %s", error)
             return []
 
     @staticmethod
@@ -64,21 +111,14 @@ class PyOCDWrapper:
         Installs a target pack.
         """
         try:
-            # Using Popen or run without capture might capture stdin/out better for long running,
-            # but run() check=True is simpler. 
-            # Note: pyocd pack install takes time and prints progress to stdout.
-            # We might want to capture output to show in GUI.
-            subprocess.run(
-                ["pyocd", "pack", "install", family_name], 
-                check=True
-            )
-            return True
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Error installing pack for {family_name}: {e}")
-            return False
-        except Exception as e:
-            logging.error(f"General Error installing pack: {e}")
-            return False
+            exit_code, output = PyOCDWrapper._run_pyocd_command(["pack", "install", family_name])
+            if exit_code != 0:
+                logging.error("Error installing pack for %s: %s", family_name, output)
+                return False, output or f"Install failed for {family_name}"
+            return True, output or f"Install succeeded for {family_name}"
+        except Exception as error:
+            logging.error("General Error installing pack: %s", error)
+            return False, str(error)
 
     @staticmethod
     def find_packs(query):
@@ -86,16 +126,12 @@ class PyOCDWrapper:
         Runs 'pyocd pack find <query>' and returns list of matching packs.
         """
         try:
-            result = subprocess.run(
-                ["pyocd", "pack", "find", query], 
-                capture_output=True, 
-                text=True, 
-                check=True
-            )
-            # Output format: "  Part/Family ... Pack"
-            return result.stdout.strip()
-        except Exception as e:
-            return f"Error searching packs: {e}"
+            exit_code, output = PyOCDWrapper._run_pyocd_command(["pack", "find", query])
+            if exit_code != 0:
+                return f"Error searching packs: {output or 'unknown pyOCD error'}"
+            return output
+        except Exception as error:
+            return f"Error searching packs: {error}"
 
     @staticmethod
     def detect_target(probe_id):
@@ -105,6 +141,7 @@ class PyOCDWrapper:
         """
         session = None
         try:
+            _ensure_builtin_probe_plugins_loaded()
             # Connect as generic cortex_m to read memory
             session = ConnectHelper.session_with_chosen_probe(
                 unique_id=probe_id,
